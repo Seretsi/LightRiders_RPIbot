@@ -12,6 +12,7 @@ private:
   Player playerId;
   int width, height;
   Board board;
+  int timebank;
 
 protected:
   void MakeMove(BoardMoves boardMove);
