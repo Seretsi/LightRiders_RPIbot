@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "sys/time.h"
 #include <vector>
+#include <string>
 #include "Board.h"
 
 class Bot {
@@ -12,13 +13,17 @@ private:
   Player playerId;
   int width, height;
   Board board;
+  Board prevBoard;
   int timebank;
+  float** qTable;
 
 protected:
   void MakeMove(BoardMoves boardMove);
 
 public:
   Bot();
+  //initialization
+  void InitQTable(std::string address);
   // Action
   virtual void Move(int time);
   // Update
@@ -33,5 +38,4 @@ public:
   virtual void FieldHeight(int height);
   virtual void PlayerNames(std::string player1, std::string player2);
 };
-
 #endif
