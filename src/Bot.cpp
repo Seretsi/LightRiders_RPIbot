@@ -1,10 +1,44 @@
 #include "Bot.h"
+#include <fstream>
+#include <string>
 using namespace std;
 
 Bot::Bot() : board() {
   struct timeval time;
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+}
+
+//needs to be double check and given a run signal from reading server messages
+void Bot::InitQTable(std::string address) {
+	//load or generate qTable
+	fstream qTableFile;
+	qTableFile.open(address);
+	if (qTableFile) {
+		int numActionsPerState, numStates;
+		cin >> numStates >> numActionsPerState;
+		qTable = new float*[numActionsPerState];
+		for (int i = 0; i < numActionsPerState; i++) {
+			qTable[i] = new float[numStates];
+		}
+		for (int i = 0; i < numActionsPerState; i++) {
+			for (int j = 0; j < numStates; j++) {
+				cin >> qTable[i][j];
+			}
+		}
+	}
+	else {
+		int numActionsPerState = 4, numStates = width * height;
+		qTable = new float*[numActionsPerState];
+		for (int i = 0; i < numActionsPerState; i++) {
+			qTable[i] = new float[numStates];
+		}
+		for (int i = 0; i < numActionsPerState; i++) {
+			for (int j = 0; j < numStates; j++) {
+				qTable[i][j] = 0.0f;
+			}
+		}
+	}
 }
 
 // instructions for the player take the form of string outputs to the engine
@@ -25,6 +59,7 @@ void Bot::Move(int time) {
     MakeMove(UP);
     return;
   }
+
   MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.
   /*From here we have access so far to the number a list of moves we can make
   our AI needs to pick one here. 
@@ -43,7 +78,10 @@ void Bot::Move(int time) {
 }
 
 void Bot::Round(int time) {  };
-void Bot::Update(Board board) { this->board = board; };
+void Bot::Update(Board board) { 
+	this->prevBoard = this->board;
+	this->board = board;
+};
 
 //total time resources available per round for computation
 void Bot::Timebank(int time) { this->timebank = time; };

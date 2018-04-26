@@ -31,6 +31,7 @@ void Parser::ProcessAction() {
 void Parser::ProcessUpdate() {
   NextCmd();
   string cmd = NextCmd();
+  fprintf(stderr, "%s", cmd, 128);
   if      (cmd == "round") { bot.Round(stoi(NextCmd())); }
   else if (cmd == "field") { // Potentially replace with your own boardstate parser
     stringstream ss(NextCmd());
@@ -55,5 +56,8 @@ void Parser::ProcessSettings() {
     string player1, player2;
     getline(args, player1, ',');
     getline(args, player2, ',');
-    bot.PlayerNames(player1,player1);}
+    bot.PlayerNames(player1,player1);
+  }
+
+  //bot.InitQTable("myQTable.txt");
 }
