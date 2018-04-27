@@ -31,7 +31,7 @@ void Parser::ProcessAction() {
 void Parser::ProcessUpdate() {
   NextCmd();
   string cmd = NextCmd();
-  fprintf(stderr, "%s", cmd, 128);
+  //fprintf(stderr, "%s", cmd, 128); 
   if      (cmd == "round") { bot.Round(stoi(NextCmd())); }
   else if (cmd == "field") { // Potentially replace with your own boardstate parser
     stringstream ss(NextCmd());
