@@ -16,6 +16,11 @@ private:
   Board prevBoard;
   int timebank;
   float** qTable;
+
+  //each block on the board is a state
+  // from each block the bot has an option of going to an adjacent block up, down, left or right
+  // totalling 4 actions per state, one of which will always be illegal depending on the direction 
+  // with which the bot entered that state. In other words, a bot can never return to a state it just left.
   int numActionsPerState, numStates;
 
 protected:
