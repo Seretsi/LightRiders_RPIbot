@@ -20,6 +20,7 @@ private:
   void ProcessAction();
   void ProcessUpdate();
   void ProcessSettings();
+  void ProcessSaveBotData();
   std::string NextCmd();
   std::stringstream cmdLine;
 };

@@ -15,7 +15,6 @@ void Bot::InitQTable(std::string address) {
 	fstream qTableFile;
 	qTableFile.open(address);
 	if (qTableFile) {
-		int numActionsPerState, numStates;
 		cin >> numStates >> numActionsPerState;
 		qTable = new float*[numActionsPerState];
 		for (int i = 0; i < numActionsPerState; i++) {
@@ -39,6 +38,22 @@ void Bot::InitQTable(std::string address) {
 			}
 		}
 	}
+	qTableFile.close();
+}
+
+void Bot::WriteQTable(std::string address) {
+	fstream qTableFile;
+	qTableFile.open(address);
+	char buf[7];
+	snprintf(buf, 24, "%i %i", numStates, numActionsPerState);
+	qTableFile << buf << endl;
+	for (int i = 0; i < numActionsPerState; i++) {
+		for (int j = 0; j < numStates; j++) {
+			qTableFile << qTable[i][j] << " ";
+		}
+		qTableFile << endl;
+	}
+	qTableFile.close();
 }
 
 // instructions for the player take the form of string outputs to the engine
