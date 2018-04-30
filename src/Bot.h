@@ -16,6 +16,7 @@ private:
   Board prevBoard;
   int timebank;
   float** qTable;
+  int numActionsPerState, numStates;
 
 protected:
   void MakeMove(BoardMoves boardMove);
@@ -24,6 +25,8 @@ public:
   Bot();
   //initialization
   void InitQTable(std::string address);
+  //finalize
+  void WriteQTable(std::string address);
   // Action
   virtual void Move(int time);
   // Update
