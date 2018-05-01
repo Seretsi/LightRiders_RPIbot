@@ -41,8 +41,9 @@ public:
   Bot();
   //initialization
   void InitQTable(std::string address);
+  //Computation
   //finalize
-  void WriteQTable(std::string address);
+  void SaveQTable(std::string address);
   //get value representing state from board
   long long getStateValue(Board board);
   // Action

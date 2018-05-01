@@ -1,5 +1,7 @@
 #include "Bot.h"
+#include <algorithm>
 #include <fstream>
+#include <map>
 #include <string>
 #include <bitset>
 #include <assert.h>
@@ -131,7 +133,7 @@ void Bot::InitQTable(std::string address) {
 	qTableFile.close();
 }
 
-void Bot::WriteQTable(std::string address) {
+void Bot::SaveQTable(std::string address) {
 	fstream qTableFile;
 	qTableFile.open(address);
 	char buf[7];
@@ -166,23 +168,31 @@ void Bot::Move(int time) {
     return;
   }
 
+  map<BoardMoves, float> nextMove;
+
   if (DEBUG) getStateValue(board);
 
   MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.
-  /*From here we have access so far to the number a list of moves we can make
-  our AI needs to pick one here. 
   
-  Each move/choice is our action* 
-  
-  we could launch a group of threads that each operate on the available next actions optimising for 
-  their own goal
-  std::thread agent(foo(*val));
-  NOTE: The more I look into this, its seem like a lot of work
+  // walk through available next moves and computer QValue of each option
+  // (I hope I understand our approach and am going the right direction)
+  for (vector<BoardMoves>::iterator it = moves.begin(); it != moves.end(); it++) {
+	  Board nextBoard = board;
+	  nextBoard.AdvanceGameOneTurn(*it, playerId);
+	  float voronoi = nextBoard.ComputeVoronoi();
 
-  To print to a debug terminal during game play we need to print to std::cerr I think
-  i.e std::cerr << printboard();
-  */
+	  nextMove[*it] = voronoi; // more pieces needed for equation: Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
+  }
 
+  // select the best move from computed Q values of available next moves (actions)
+  BoardMoves bestMove = nextMove.begin()->first;
+  for (map<BoardMoves, float>::iterator it = nextMove.begin(); it != nextMove.end(); it++) {
+	  if (nextMove[bestMove] > it->second) {
+		  bestMove = it->first;
+	  }
+  }
+  // MakeMove(bestMove);
+  MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
 }
 
 void Bot::Round(int time) {  };

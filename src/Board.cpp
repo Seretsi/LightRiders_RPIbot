@@ -28,3 +28,56 @@ vector<BoardMoves> Board::LegalMoves(Player pl){
   if (pos.first < 15  && b[pos.first+1][pos.second]) moves.push_back(RIGHT);
   return moves;
 }
+
+/*
+Moves the player one step. Does not speculate enemy move
+input:
+	BoardMoves move - move taken by player
+*/
+
+void Board::AdvanceGameOneTurn(BoardMoves move, Player pl) {
+	pair<int, int> pos = playerPos[pl];
+	switch (move) {
+	case UP: {
+		b[pos.first][pos.second] = 'x';
+		pos.second++;
+		break;
+	}
+	case DOWN: {
+		b[pos.first][pos.second] = 'x';
+		pos.second--;
+		break;
+	}
+	case LEFT: {
+		b[pos.first][pos.second] = 'x';
+		pos.first++;
+		break;
+	}
+	case RIGHT: {
+		b[pos.first][pos.second] = 'x';
+		pos.first--;
+		break;
+	}
+	}
+}
+
+int Board::ComputeVoronoi() {
+	int ret = 0;
+	int playerScore = 0;
+	int enemyScore = 0;
+
+	for (int i = 0; i < 16; i++) {
+		for (int j = 0; j < 16; j++) {
+			//b[i][j]
+			//check if current block is open if not continue
+			//compute distance of block to player
+			//compute distance of block to enemy
+			//if equidistant continue
+			//reward winning player score
+		}
+	}
+
+	ret = playerScore - enemyScore;
+	return ret;
+}
+

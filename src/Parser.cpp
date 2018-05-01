@@ -65,5 +65,5 @@ void Parser::ProcessSettings() {
 }
 
 void Parser::ProcessSaveBotData() {
-	bot.WriteQTable("myQTable.txt");
+	bot.SaveQTable("myQTable.txt");
 }
