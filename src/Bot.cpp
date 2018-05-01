@@ -58,12 +58,6 @@ void Bot::SaveQTable(std::string address) {
 	qTableFile.close();
 }
 
-int Bot::ComputeVoronoi(Board board) {
-	int ret = 0;
-
-	return ret;
-}
-
 // instructions for the player take the form of string outputs to the engine
 // functions is essential good for now
 
@@ -85,10 +79,12 @@ void Bot::Move(int time) {
 
   map<BoardMoves, float> nextMove;
 
+  // walk through available next moves and computer QValue of each option
+  // (I hope I understand our approach and am going the right direction)
   for (vector<BoardMoves>::iterator it = moves.begin(); it != moves.end(); it++) {
 	  Board nextBoard = board;
-	  
-	  float voronoi = ComputeVoronoi(nextBoard);
+	  nextBoard.AdvanceGameOneTurn(*it, playerId);
+	  float voronoi = nextBoard.ComputeVoronoi();
 
 	  nextMove[*it] = voronoi; // more pieces needed for equation: Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
   }
@@ -101,13 +97,7 @@ void Bot::Move(int time) {
 	  }
   }
   // MakeMove(bestMove);
-  MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.
-  /*From here we have access so far to the number a list of moves we can make
-  our AI needs to pick one here. 
-  
-  Each move/choice is our action* 
-  */
-
+  MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
 }
 
 void Bot::Round(int time) {  };

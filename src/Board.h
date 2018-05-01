@@ -20,6 +20,8 @@ public:
   Board();
   Board(std::stringstream &stream);
   std::vector<BoardMoves> LegalMoves(Player pl);
+  void AdvanceGameOneTurn(BoardMoves move, Player pl );
+  int ComputeVoronoi();
 };
 
 #endif

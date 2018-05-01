@@ -31,7 +31,6 @@ public:
   //initialization
   void InitQTable(std::string address);
   //Computation
-  int ComputeVoronoi(Board board);
   //finalize
   void SaveQTable(std::string address);
   // Action
