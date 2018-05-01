@@ -1,12 +1,102 @@
 #include "Bot.h"
 #include <fstream>
 #include <string>
+#include <bitset>
+#include <assert.h>
 using namespace std;
+
+#define DEBUG 1
 
 Bot::Bot() : board() {
   struct timeval time;
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
+
+  numBitsPerState = WINDOW_HEIGHT * WINDOW_WIDTH + (storeOpponent) ? numBitsForOpponent : 0;
+}
+
+long long Bot::getStateValue(Board board) {
+
+  assert (WINDOW_WIDTH == WINDOW_HEIGHT); //this breaks if this is true lmfao, to fix just define separate xend and yend and adjust for left/right
+
+  unsigned long long rep = 0;
+
+  int xstart, ystart, xdir, ydir;
+
+  switch (lastMove) {
+  case UP:
+    xstart = board.playerPos[playerId].first - PER_OFFSET;
+    ystart = board.playerPos[playerId].second - PAR_OFFSET;
+    xdir = 1;
+    ydir = 1;
+    break;
+  case DOWN:
+    xstart = board.playerPos[playerId].first + PER_OFFSET;
+    ystart = board.playerPos[playerId].second + PAR_OFFSET;
+    xdir = -1;
+    ydir = -1;
+    break;
+  case RIGHT:
+    xstart = board.playerPos[playerId].first + PAR_OFFSET;
+    ystart = board.playerPos[playerId].second - PER_OFFSET;
+    xdir = -1;
+    ydir = 1;
+    break;
+  case LEFT:
+    xstart = board.playerPos[playerId].first - PAR_OFFSET;
+    ystart = board.playerPos[playerId].second + PER_OFFSET;
+    xdir = 1;
+    ydir = -1;
+  }
+
+  if (DEBUG) cerr << "Located at ("<<board.playerPos[playerId].first<<","<<board.playerPos[playerId].second<<
+    ")\nField of View: ("<<xstart<<","<<ystart<<") through ("<<xstart + (WINDOW_WIDTH-1)*xdir<<","<<ystart + (WINDOW_HEIGHT-1)*ydir<<"):"<<endl;
+
+  //store your position
+  if (lastMove == UP || lastMove == DOWN) {
+    for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir) {
+      for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
+        rep <<= 1;
+        if (y < 0 || y > 15 || x < 0 || x > 15) {
+          if (DEBUG) cerr << "/";
+          continue;
+        }
+        rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
+        if (DEBUG) {
+          if (board.b[x][y]) cerr << ".";
+          else cerr << "x";
+        }
+      }
+      if (DEBUG) cerr << endl;
+    }
+  }
+  else {
+    for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
+      for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir){
+        rep <<= 1;
+        if (y < 0 || y > 15 || x < 0 || x > 15) {
+          if (DEBUG) cerr << "/";
+          continue;
+        }
+        rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
+        if (DEBUG) {
+          if (board.b[x][y]) cerr << ".";
+          else cerr << "x";
+        }
+      }
+      if (DEBUG) cerr << endl;
+    }
+  }
+
+  //store opponent's position
+  if (storeOpponent) {
+    rep <<= numBitsForOpponent;
+    rep += 16 * board.playerPos[(playerId + 1) % 2].first + board.playerPos[(playerId + 1) % 2].second;
+  }
+
+  if (DEBUG) cerr << "State maps to " << rep <<"\n("<<bitset<64>{rep}<<") "<<endl;
+
+  return rep;
 }
 
 //needs to be double check and given a run signal from reading server messages
@@ -60,6 +150,7 @@ void Bot::WriteQTable(std::string address) {
 // functions is essential good for now
 
 void Bot::MakeMove(BoardMoves boardMove) { 
+  lastMove = boardMove;
   switch (boardMove) {
     case UP:    printf("up\n"); break;
     case DOWN:  printf("down\n"); break;
@@ -74,6 +165,8 @@ void Bot::Move(int time) {
     MakeMove(UP);
     return;
   }
+
+  if (DEBUG) getStateValue(board);
 
   MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.
   /*From here we have access so far to the number a list of moves we can make

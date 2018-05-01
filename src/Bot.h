@@ -10,12 +10,23 @@
 
 class Bot {
 private:
+  //constants for state representation (window of view size, offset)
+  const int WINDOW_HEIGHT = 5; //Height with direction relative to agent direction
+  const int WINDOW_WIDTH = 5; //Width with direction relative to agent direction
+  const int PAR_OFFSET = 3; //Offset parallel to (same direction as) agent, AKA Y offset if facing north.
+  const int PER_OFFSET = 2; //Offset perpendicular to (same direction as) agent, AKA Y offset if facing north.
+                              //Offset of (0,0) means agent is in upper lefthand corner, (2,2) is center (if width/height is 5)
+  const boolean storeOpponent = true; //set to false for simplistic, only storing self bits
+  const int numBitsForOpponent = 8; //number of bits required to store opponents position
+  int numBitsPerState; //state size in bits
+
   Player playerId;
   int width, height;
   Board board;
   Board prevBoard;
   int timebank;
   float** qTable;
+  BoardMoves lastMove = UP;
 
   //each block on the board is a state
   // from each block the bot has an option of going to an adjacent block up, down, left or right
@@ -32,6 +43,8 @@ public:
   void InitQTable(std::string address);
   //finalize
   void WriteQTable(std::string address);
+  //get value representing state from board
+  long long getStateValue(Board board);
   // Action
   virtual void Move(int time);
   // Update
