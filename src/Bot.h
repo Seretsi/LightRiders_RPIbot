@@ -30,8 +30,10 @@ public:
   Bot();
   //initialization
   void InitQTable(std::string address);
+  //Computation
+  int ComputeVoronoi(Board board);
   //finalize
-  void WriteQTable(std::string address);
+  void SaveQTable(std::string address);
   // Action
   virtual void Move(int time);
   // Update
