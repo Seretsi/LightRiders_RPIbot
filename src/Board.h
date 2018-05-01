@@ -14,8 +14,8 @@ x == wall from players
 */
 
 class Board {
-  std::pair<int, int> playerPos[2];
 public:
+  std::pair<int, int> playerPos[2];
   char b[16][16];
   Board();
   Board(std::stringstream &stream);
