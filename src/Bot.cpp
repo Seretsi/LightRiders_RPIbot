@@ -172,27 +172,47 @@ void Bot::Move(int time) {
 
   if (DEBUG) getStateValue(board);
 
-  MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.
-  
   // walk through available next moves and computer QValue of each option
   // (I hope I understand our approach and am going the right direction)
+  float alpha = 0.5f;
+  float gamma = 0.2f;
+  float r = 0.2f;
   for (vector<BoardMoves>::iterator it = moves.begin(); it != moves.end(); it++) {
 	  Board nextBoard = board;
 	  nextBoard.AdvanceGameOneTurn(*it, playerId);
-	  float voronoi = nextBoard.ComputeVoronoi();
-
-	  nextMove[*it] = voronoi; // more pieces needed for equation: Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
+	  int voronoi = nextBoard.ComputeVoronoi(playerId);
+	  vector<BoardMoves> futureMoves = nextBoard.LegalMoves(playerId);
+	  map<BoardMoves, int> nextMoveProbabilities; //probabilities defines by voronoi scores (rand pick policy);
+	  float totalScoreForRandPolicy = 0.0f;
+	  for (auto& futureMove : futureMoves) {
+		  Board nextNextBoard = nextBoard;
+		  nextNextBoard.AdvanceGameOneTurn(futureMove, playerId);
+		  nextMoveProbabilities[futureMove] = nextNextBoard.ComputeVoronoi(playerId);
+		  totalScoreForRandPolicy += nextMoveProbabilities[futureMove];
+	  }
+	  float randSelectionProbability = float(rand() / RAND_MAX); // value 0 - 1
+	  int futureQ;
+	  float sum = 0.0f;
+	  for (auto& futureMove : futureMoves) {
+		  sum += nextMoveProbabilities[futureMove] / totalScoreForRandPolicy;
+		  if (randSelectionProbability <= sum) {
+			  futureQ = nextMoveProbabilities[futureMove];
+			  break;
+		  }
+	  }
+	  // Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
+	  nextMove[*it] = voronoi + alpha * ((r + gamma * futureQ) - voronoi); 
   }
 
   // select the best move from computed Q values of available next moves (actions)
   BoardMoves bestMove = nextMove.begin()->first;
-  for (map<BoardMoves, float>::iterator it = nextMove.begin(); it != nextMove.end(); it++) {
-	  if (nextMove[bestMove] > it->second) {
-		  bestMove = it->first;
+  for (auto& best : nextMove) {
+	  if (nextMove[bestMove] > best.second) {
+		  bestMove = best.first;
 	  }
   }
-  // MakeMove(bestMove);
-  MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
+  MakeMove(bestMove);
+  // MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
 }
 
 void Bot::Round(int time) {  };
