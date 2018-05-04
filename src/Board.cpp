@@ -61,23 +61,33 @@ void Board::AdvanceGameOneTurn(BoardMoves move, Player pl) {
 	}
 }
 
-int Board::ComputeVoronoi() {
+int Board::ComputeVoronoi(Player pl) {
 	int ret = 0;
-	int playerScore = 0;
-	int enemyScore = 0;
+	int score1 = 0;
+	int score2 = 0;
 
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 16; j++) {
-			//b[i][j]
-			//check if current block is open if not continue
-			//compute distance of block to player
-			//compute distance of block to enemy
-			//if equidistant continue
-			//reward winning player score
+			int delta1 = playerPos[Pl1].first - i + playerPos[Pl1].second - j;
+			int delta2 = playerPos[Pl2].first - i + playerPos[Pl2].second - j;
+			if (delta1 < delta2) {
+				score1++;
+			}
+			else if (delta2 < delta1) {
+				score2++;
+			}
+			else {
+				continue;
+			}
 		}
 	}
-
-	ret = playerScore - enemyScore;
+	if (pl == Pl1) {
+		ret = score1 - score2;
+	}
+	else {
+		ret = score2 - score1;
+	}
+	
 	return ret;
 }
 
