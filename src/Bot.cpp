@@ -5,121 +5,138 @@
 #include <string>
 #include <bitset>
 #include <assert.h>
+#include <math.h>
 using namespace std;
 
 #define DEBUG 1
+#define NEWSTATEREP 0
 
 Bot::Bot() : board() {
+  if(NEWSTATEREP) cerr << "Starting Voronoi with Q Learning: Simple Rep" << endl;
+  else cerr << "Starting Voronoi with Q Learning: Complex Rep" << endl;
   struct timeval time;
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
 
-  numBitsPerState = WINDOW_HEIGHT * WINDOW_WIDTH + (storeOpponent) ? numBitsForOpponent : 0;
+  numBitsPerState = WINDOW_HEIGHT * WINDOW_WIDTH + ((storeOpponent) ? numBitsForOpponent : 0);
+  InitQTable(TableFile);
 }
 
 long long Bot::getStateValue(Board board) {
 
-  assert (WINDOW_WIDTH == WINDOW_HEIGHT); //this breaks if this is true lmfao, to fix just define separate xend and yend and adjust for left/right
-
   unsigned long long rep = 0;
 
-  int xstart, ystart, xdir, ydir;
-
-  switch (lastMove) {
-  case UP:
-    xstart = board.playerPos[playerId].first - PER_OFFSET;
-    ystart = board.playerPos[playerId].second - PAR_OFFSET;
-    xdir = 1;
-    ydir = 1;
-    break;
-  case DOWN:
-    xstart = board.playerPos[playerId].first + PER_OFFSET;
-    ystart = board.playerPos[playerId].second + PAR_OFFSET;
-    xdir = -1;
-    ydir = -1;
-    break;
-  case RIGHT:
-    xstart = board.playerPos[playerId].first + PAR_OFFSET;
-    ystart = board.playerPos[playerId].second - PER_OFFSET;
-    xdir = -1;
-    ydir = 1;
-    break;
-  case LEFT:
-    xstart = board.playerPos[playerId].first - PAR_OFFSET;
-    ystart = board.playerPos[playerId].second + PER_OFFSET;
-    xdir = 1;
-    ydir = -1;
-  }
-
-  if (DEBUG) cerr << "Located at ("<<board.playerPos[playerId].first<<","<<board.playerPos[playerId].second<<
-    ")\nField of View: ("<<xstart<<","<<ystart<<") through ("<<xstart + (WINDOW_WIDTH-1)*xdir<<","<<ystart + (WINDOW_HEIGHT-1)*ydir<<"):"<<endl;
-
-  //store your position
-  if (lastMove == UP || lastMove == DOWN) {
-    for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir) {
-      for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
-        rep <<= 1;
-        if (y < 0 || y > 15 || x < 0 || x > 15) {
-          if (DEBUG) cerr << "/";
-          continue;
-        }
-        rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
-        if (DEBUG) {
-          if (board.b[x][y]) cerr << ".";
-          else cerr << "x";
-        }
-      }
-      if (DEBUG) cerr << endl;
-    }
-  }
-  else {
-    for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
-      for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir){
-        rep <<= 1;
-        if (y < 0 || y > 15 || x < 0 || x > 15) {
-          if (DEBUG) cerr << "/";
-          continue;
-        }
-        rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
-        if (DEBUG) {
-          if (board.b[x][y]) cerr << ".";
-          else cerr << "x";
-        }
-      }
-      if (DEBUG) cerr << endl;
-    }
-  }
-
-  //store opponent's position
-  if (storeOpponent) {
-    rep <<= numBitsForOpponent;
+  //assert (WINDOW_WIDTH == WINDOW_HEIGHT); //this breaks if this is true lmfao, to fix just define separate xend and yend and adjust for left/right
+  if (NEWSTATEREP) {
     rep += 16 * board.playerPos[(playerId + 1) % 2].first + board.playerPos[(playerId + 1) % 2].second;
   }
+  else {
+    int xstart, ystart, xdir, ydir;
 
-  if (DEBUG) cerr << "State maps to " << rep <<"\n("<<bitset<64>{rep}<<") "<<endl;
+    switch (lastMove) {
+    case UP:
+      xstart = board.playerPos[playerId].first - PER_OFFSET;
+      ystart = board.playerPos[playerId].second - PAR_OFFSET;
+      xdir = 1;
+      ydir = 1;
+      break;
+    case DOWN:
+      xstart = board.playerPos[playerId].first + PER_OFFSET;
+      ystart = board.playerPos[playerId].second + PAR_OFFSET;
+      xdir = -1;
+      ydir = -1;
+      break;
+    case RIGHT:
+      xstart = board.playerPos[playerId].first + PAR_OFFSET;
+      ystart = board.playerPos[playerId].second - PER_OFFSET;
+      xdir = -1;
+      ydir = 1;
+      break;
+    case LEFT:
+      xstart = board.playerPos[playerId].first - PAR_OFFSET;
+      ystart = board.playerPos[playerId].second + PER_OFFSET;
+      xdir = 1;
+      ydir = -1;
+    }
 
+    if (DEBUG) cerr << "Located at (" << board.playerPos[playerId].first << "," << board.playerPos[playerId].second <<
+      ")\nField of View: (" << xstart << "," << ystart << ") through (" << xstart + (WINDOW_WIDTH - 1)*xdir << "," << ystart + (WINDOW_HEIGHT - 1)*ydir << "):" << endl;
+
+    //store your position
+    if (lastMove == UP || lastMove == DOWN) {
+      for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir) {
+        for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
+          rep <<= 1;
+          if (y < 0 || y > 15 || x < 0 || x > 15) {
+            if (DEBUG) cerr << "/";
+            continue;
+          }
+          rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
+          if (DEBUG) {
+            if (board.b[x][y]) cerr << ".";
+            else cerr << "x";
+          }
+        }
+        if (DEBUG) cerr << endl;
+      }
+    }
+    else {
+      for (int x = xstart; (xdir == 1) ? x < xstart + WINDOW_WIDTH : x > xstart - WINDOW_WIDTH; x += xdir) {
+        for (int y = ystart; (ydir == 1) ? y < ystart + WINDOW_HEIGHT : y > ystart - WINDOW_HEIGHT; y += ydir) {
+          rep <<= 1;
+          if (y < 0 || y > 15 || x < 0 || x > 15) {
+            if (DEBUG) cerr << "/";
+            continue;
+          }
+          rep += board.b[x][y]; //If obstacle, add 0 bit. If traversable, add 1 bit.
+          if (DEBUG) {
+            if (board.b[x][y]) cerr << ".";
+            else cerr << "x";
+          }
+        }
+        if (DEBUG) cerr << endl;
+      }
+    }
+
+    //store opponent's position
+    if (storeOpponent) {
+      rep <<= numBitsForOpponent;
+      rep += 16 * board.playerPos[(playerId + 1) % 2].first + board.playerPos[(playerId + 1) % 2].second;
+    }
+
+    if (DEBUG) cerr << "State maps to " << rep << "\n(" << bitset<64>{rep} << ") " << endl;
+  }
   return rep;
 }
 
 //needs to be double check and given a run signal from reading server messages
 void Bot::InitQTable(std::string address) {
+  if (numActionsPerState != 0 && numStates != 0) return;
 	//load or generate qTable
-	fstream qTableFile;
-	qTableFile.open(address);
+	ifstream qTableFile;
+	qTableFile.open(address,ios::out | ios::binary);
 	if (qTableFile) {
-		cin >> numStates >> numActionsPerState;
+    cerr << "Loading Q table from file " << TableFile << endl;
+    qTableFile.read((char*)&numStates, sizeof(int));
+    qTableFile.read((char*)&numActionsPerState, sizeof(int));
+    cerr <<"size: "<<numStates<<" by "<< numActionsPerState<< endl;
+
 		qTable = new float*[numActionsPerState];
 		for (int i = 0; i < numActionsPerState; i++) {
 			qTable[i] = new float[numStates];
 		}
 		for (int i = 0; i < numActionsPerState; i++) {
 			for (int j = 0; j < numStates; j++) {
-				cin >> qTable[i][j];
+        qTableFile.read((char*)&qTable[i][j], sizeof(float));
 			}
 		}
 	}
 	else {
-		int numActionsPerState = 4, numStates = width * height;
+    cerr << "Could not load Q table from " << TableFile << endl;
+    numActionsPerState = 4;
+    if (NEWSTATEREP) { numStates = 16 * 16; }//width * height;
+    else { numStates = (int)pow(2, numBitsPerState); }
+    cerr << "Creating new table of size " << numStates << " by " << numActionsPerState << endl;
 		qTable = new float*[numActionsPerState];
 		for (int i = 0; i < numActionsPerState; i++) {
 			qTable[i] = new float[numStates];
@@ -134,18 +151,19 @@ void Bot::InitQTable(std::string address) {
 }
 
 void Bot::SaveQTable(std::string address) {
-	fstream qTableFile;
-	qTableFile.open(address);
-	char buf[7];
-	snprintf(buf, 24, "%i %i", numStates, numActionsPerState);
-	qTableFile << buf << endl;
+  cerr << "Save Q table to file " << TableFile << endl;
+	ofstream qTableFile;
+	qTableFile.open(address, ios::out | ios::binary);
+  qTableFile.write((char*)&numStates, sizeof(int));
+  qTableFile.write((char*)&numActionsPerState, sizeof(int));
+
 	for (int i = 0; i < numActionsPerState; i++) {
 		for (int j = 0; j < numStates; j++) {
-			qTableFile << qTable[i][j] << " ";
+      qTableFile.write((char*)&qTable[i][j], sizeof(float));
 		}
 		qTableFile << endl;
 	}
-	qTableFile.close();
+  qTableFile.close();
 }
 
 // instructions for the player take the form of string outputs to the engine
@@ -162,46 +180,55 @@ void Bot::MakeMove(BoardMoves boardMove) {
 }
 
 void Bot::Move(int time) {
+
+  SaveQTable(TableFile);
   vector<BoardMoves> moves = board.LegalMoves(playerId);
   if(moves.size() == 0){
     MakeMove(UP);
     return;
   }
+  
+  float alpha = 0.4f;
+  float gamma = 0.8f;
+  float r = 0.2f;
 
   map<BoardMoves, float> nextMove;
 
-  if (DEBUG) getStateValue(board);
-
   // walk through available next moves and computer QValue of each option
   // (I hope I understand our approach and am going the right direction)
-  float alpha = 0.5f;
-  float gamma = 0.2f;
-  float r = 0.2f;
+  int s = getStateValue(board);
   for (vector<BoardMoves>::iterator it = moves.begin(); it != moves.end(); it++) {
 	  Board nextBoard = board;
 	  nextBoard.AdvanceGameOneTurn(*it, playerId);
-	  int voronoi = nextBoard.ComputeVoronoi(playerId);
+    int sPrime = getStateValue(nextBoard);
+    int voronoi = board.ComputeVoronoi(playerId);
 	  vector<BoardMoves> futureMoves = nextBoard.LegalMoves(playerId);
 	  map<BoardMoves, int> nextMoveProbabilities; //probabilities defines by voronoi scores (rand pick policy);
 	  float totalScoreForRandPolicy = 0.0f;
+    float futureQ = 0.0f;
 	  for (auto& futureMove : futureMoves) {
+      if (futureQ < qTable[futureMove][sPrime]) futureQ = qTable[futureMove][sPrime];
 		  Board nextNextBoard = nextBoard;
 		  nextNextBoard.AdvanceGameOneTurn(futureMove, playerId);
 		  nextMoveProbabilities[futureMove] = nextNextBoard.ComputeVoronoi(playerId);
 		  totalScoreForRandPolicy += nextMoveProbabilities[futureMove];
 	  }
 	  float randSelectionProbability = float(rand() / RAND_MAX); // value 0 - 1
-	  int futureQ;
+	  int futureV;
 	  float sum = 0.0f;
 	  for (auto& futureMove : futureMoves) {
 		  sum += nextMoveProbabilities[futureMove] / totalScoreForRandPolicy;
 		  if (randSelectionProbability <= sum) {
-			  futureQ = nextMoveProbabilities[futureMove];
+			  futureV = nextMoveProbabilities[futureMove];
 			  break;
 		  }
 	  }
 	  // Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
-	  nextMove[*it] = voronoi + alpha * ((r + gamma * futureQ) - voronoi); 
+    cerr << qTable[*it][s];
+    qTable[*it][s] = qTable[*it][s] + alpha * (((float)voronoi + gamma * futureQ) - qTable[*it][s]);
+    cerr << " to " << qTable[*it][s] << endl;
+    //used for move selection
+    nextMove[*it] = qTable[*it][s] + alpha * (((float)voronoi + gamma * futureV) - qTable[*it][s]);
   }
 
   // select the best move from computed Q values of available next moves (actions)
@@ -211,8 +238,9 @@ void Bot::Move(int time) {
 		  bestMove = best.first;
 	  }
   }
+
   MakeMove(bestMove);
-  // MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
+  //MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
 }
 
 void Bot::Round(int time) {  };
