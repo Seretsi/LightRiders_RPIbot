@@ -6,14 +6,15 @@
 #include <bitset>
 #include <assert.h>
 #include <math.h>
+#include <vector>
 using namespace std;
 
 #define DEBUG 1
 #define NEWSTATEREP 0
 
 Bot::Bot() : board() {
-  if(NEWSTATEREP) cerr << "Starting Voronoi with Q Learning: Simple Rep" << endl;
-  else cerr << "Starting Voronoi with Q Learning: Complex Rep" << endl;
+  if(NEWSTATEREP) cerr << "V5 Starting Voronoi with Q Learning: Simple Rep" << endl;
+  else cerr << "V5 Starting Voronoi with Q Learning: Complex Rep" << endl;
   struct timeval time;
   gettimeofday(&time,NULL);
   srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
@@ -114,11 +115,10 @@ void Bot::InitQTable(std::string address) {
   if (numActionsPerState != 0 && numStates != 0) return;
 	//load or generate qTable
 	ifstream qTableFile;
-	qTableFile.open(address,ios::out | ios::binary);
+	qTableFile.open(address);
 	if (qTableFile) {
     cerr << "Loading Q table from file " << TableFile << endl;
-    qTableFile.read((char*)&numStates, sizeof(int));
-    qTableFile.read((char*)&numActionsPerState, sizeof(int));
+    qTableFile >> numStates >> numActionsPerState;
     cerr <<"size: "<<numStates<<" by "<< numActionsPerState<< endl;
 
 		qTable = new float*[numActionsPerState];
@@ -127,7 +127,7 @@ void Bot::InitQTable(std::string address) {
 		}
 		for (int i = 0; i < numActionsPerState; i++) {
 			for (int j = 0; j < numStates; j++) {
-        qTableFile.read((char*)&qTable[i][j], sizeof(float));
+        qTableFile >> qTable[i][j];
 			}
 		}
 	}
@@ -147,19 +147,25 @@ void Bot::InitQTable(std::string address) {
 			}
 		}
 	}
+
+  for (int i = 0; i < numActionsPerState; i++) {
+    for (int j = 0; j < numStates; j++) {
+      cerr << qTable[i][j] << " ";
+    }
+  }cerr << endl;
+
 	qTableFile.close();
 }
 
 void Bot::SaveQTable(std::string address) {
   cerr << "Save Q table to file " << TableFile << endl;
 	ofstream qTableFile;
-	qTableFile.open(address, ios::out | ios::binary);
-  qTableFile.write((char*)&numStates, sizeof(int));
-  qTableFile.write((char*)&numActionsPerState, sizeof(int));
+	qTableFile.open(address);
+  qTableFile << numStates<< " "<< numActionsPerState << endl;
 
 	for (int i = 0; i < numActionsPerState; i++) {
 		for (int j = 0; j < numStates; j++) {
-      qTableFile.write((char*)&qTable[i][j], sizeof(float));
+      qTableFile << qTable[i][j] << " ";
 		}
 		qTableFile << endl;
 	}
@@ -200,46 +206,55 @@ void Bot::Move(int time) {
   for (vector<BoardMoves>::iterator it = moves.begin(); it != moves.end(); it++) {
 	  Board nextBoard = board;
 	  nextBoard.AdvanceGameOneTurn(*it, playerId);
+    lastMove = *it;//important for getting state in sprime
     int sPrime = getStateValue(nextBoard);
     int voronoi = board.ComputeVoronoi(playerId);
+    //int simpleReward = nextBoard.LegalMoves(playerId).size() * 4 - 8;
 	  vector<BoardMoves> futureMoves = nextBoard.LegalMoves(playerId);
 	  map<BoardMoves, int> nextMoveProbabilities; //probabilities defines by voronoi scores (rand pick policy);
-	  float totalScoreForRandPolicy = 0.0f;
+    float totalScoreForRandPolicy = 9999;//0.0f;
     float futureQ = 0.0f;
 	  for (auto& futureMove : futureMoves) {
       if (futureQ < qTable[futureMove][sPrime]) futureQ = qTable[futureMove][sPrime];
-		  Board nextNextBoard = nextBoard;
+		  /**Board nextNextBoard = nextBoard;
 		  nextNextBoard.AdvanceGameOneTurn(futureMove, playerId);
-		  nextMoveProbabilities[futureMove] = nextNextBoard.ComputeVoronoi(playerId);
-		  totalScoreForRandPolicy += nextMoveProbabilities[futureMove];
+		  nextMoveProbabilities[futureMove] = nextBoard.LegalMoves(playerId).size() + nextNextBoard.LegalMoves(playerId).size(); //simple reward, replaces nextNextBoard.ComputeVoronoi(playerId);
+      totalScoreForRandPolicy += nextMoveProbabilities[futureMove]; **/
 	  }
 	  float randSelectionProbability = float(rand() / RAND_MAX); // value 0 - 1
-	  int futureV;
+    int randomizedFutureQ = 0.0f;
 	  float sum = 0.0f;
 	  for (auto& futureMove : futureMoves) {
 		  sum += nextMoveProbabilities[futureMove] / totalScoreForRandPolicy;
 		  if (randSelectionProbability <= sum) {
-			  futureV = nextMoveProbabilities[futureMove];
+        randomizedFutureQ = nextMoveProbabilities[futureMove];
 			  break;
 		  }
 	  }
+    cerr << "r: "<<voronoi << "fqr:" << randomizedFutureQ << "fq:" << futureQ << "Q[" << s << "][" << *it << "]=" << qTable[*it][s] << " ";
 	  // Q[s,a] = Q[s,a] + alpha((r + gamma * maxQ[s',a']) - Q[s,a])
-    cerr << qTable[*it][s];
     qTable[*it][s] = qTable[*it][s] + alpha * (((float)voronoi + gamma * futureQ) - qTable[*it][s]);
     cerr << " to " << qTable[*it][s] << endl;
     //used for move selection
-    nextMove[*it] = qTable[*it][s] + alpha * (((float)voronoi + gamma * futureV) - qTable[*it][s]);
+    nextMove[*it] = qTable[*it][s] + alpha * (((float)voronoi + gamma * futureQ) - qTable[*it][s]);
   }
 
   // select the best move from computed Q values of available next moves (actions)
-  BoardMoves bestMove = nextMove.begin()->first;
+  float highestVal = -1 * INFINITY;
+  std::vector<BoardMoves> bestMoves;
   for (auto& best : nextMove) {
-	  if (nextMove[bestMove] > best.second) {
-		  bestMove = best.first;
-	  }
+	  if (best.second > highestVal) {
+      highestVal = best.second;
+      bestMoves.clear();
+		  bestMoves.push_back(best.first);
+    }
+    else if (highestVal == best.second) {
+      bestMoves.push_back(best.first);
+    }
+
   }
 
-  MakeMove(bestMove);
+  MakeMove(bestMoves[rand() % bestMoves.size()]); //make move randomly from among best
   //MakeMove(moves[rand() % moves.size()]); // we need to replace this line here.  
 }
 

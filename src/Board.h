@@ -2,6 +2,7 @@
 #define BOARD_h
 
 #include <sstream>
+#include <iostream>
 #include <vector>
 #include "GameEnums.h"
 

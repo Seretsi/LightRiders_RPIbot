@@ -10,12 +10,12 @@
 
 class Bot {
 private:
-  std::string TableFile = "./qtable--complexrep.bin";
+  std::string TableFile = "./qtable-comrep-voronoi.txt";
 
   //constants for state representation (window of view size, offset)
-  const int WINDOW_HEIGHT = 5; //Height with direction relative to agent direction
+  const int WINDOW_HEIGHT = 4; //Height with direction relative to agent direction
   const int WINDOW_WIDTH = 3; //Width with direction relative to agent direction
-  const int PAR_OFFSET = 3; //Offset parallel to (same direction as) agent, AKA Y offset if facing north.
+  const int PAR_OFFSET = 2; //Offset parallel to (same direction as) agent, AKA Y offset if facing north.
   const int PER_OFFSET = 1; //Offset perpendicular to (same direction as) agent, AKA X offset if facing north.
                               //Offset of (0,0) means agent is in upper lefthand corner, (2,2) is center (if width/height is 5)
   const boolean storeOpponent = false; //set to false for simplistic, only storing self bits
