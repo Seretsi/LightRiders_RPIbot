@@ -1,4 +1,7 @@
 #include "Board.h"
+#include <fstream>
+#include <sstream>
+#include <iostream>
 using namespace std;
 
 Board::Board() {}
@@ -65,11 +68,10 @@ int Board::ComputeVoronoi(Player pl) {
 	int ret = 0;
 	int score1 = 0;
 	int score2 = 0;
-
 	for (int i = 0; i < 16; i++) {
 		for (int j = 0; j < 16; j++) {
-			int delta1 = playerPos[Pl1].first - i + playerPos[Pl1].second - j;
-			int delta2 = playerPos[Pl2].first - i + playerPos[Pl2].second - j;
+			int delta1 = abs(playerPos[Pl1].first -i) + abs(playerPos[Pl1].second - j);
+			int delta2 = abs(playerPos[Pl2].first - i) + abs(playerPos[Pl2].second - j);
 			if (delta1 < delta2) {
 				score1++;
 			}
@@ -87,7 +89,7 @@ int Board::ComputeVoronoi(Player pl) {
 	else {
 		ret = score2 - score1;
 	}
-	
+	cerr << "Returning: " << ret << std::endl;
 	return ret;
 }
 
